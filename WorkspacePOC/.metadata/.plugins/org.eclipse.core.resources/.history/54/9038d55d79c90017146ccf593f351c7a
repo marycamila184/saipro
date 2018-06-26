@@ -1,0 +1,10 @@
+
+public class AtributosTextura {
+	
+	public double matrizCO0Graus[][];
+	
+	public double entropia0Graus;
+	
+	public double segundoMomentoAng0Graus;
+
+}

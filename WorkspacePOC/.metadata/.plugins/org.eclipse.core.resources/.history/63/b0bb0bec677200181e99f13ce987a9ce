@@ -1,0 +1,14 @@
+package com.up.somamatrizes.main;
+
+public class Somador implements Runnable {
+	
+	public Somador() {
+		// TODO Auto-generated constructor stub
+	}
+	
+	@Override
+	public void run() {
+		
+	}
+
+}

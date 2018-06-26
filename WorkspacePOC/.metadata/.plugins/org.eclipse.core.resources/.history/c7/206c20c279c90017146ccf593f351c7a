@@ -1,0 +1,49 @@
+import java.util.List;
+
+public class CaracteristicaMancha {
+	
+	public int id;	
+	public int largura;
+	public int altura;	
+	public int posicaoX;
+	public int posicaoY;	
+	public List<AtributosTextura> atributosTextura;
+	
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public int getLargura() {
+		return largura;
+	}
+	public void setLargura(int largura) {
+		this.largura = largura;
+	}
+	public int getAltura() {
+		return altura;
+	}
+	public void setAltura(int altura) {
+		this.altura = altura;
+	}
+	
+	public int getPosicaoX() {
+		return posicaoX;
+	}
+	public void setPosicaoX(int posicaoX) {
+		this.posicaoX = posicaoX;
+	}
+	public int getPosicaoY() {
+		return posicaoY;
+	}
+	public void setPosicaoY(int posicaoY) {
+		this.posicaoY = posicaoY;
+	}
+	public List<AtributosTextura> getAtributosTextura() {
+		return atributosTextura;
+	}
+	public void setAtributosTextura(List<AtributosTextura> atributosTextura) {
+		this.atributosTextura = atributosTextura;
+	}
+}

@@ -1,0 +1,18 @@
+package com.up.somamatrizes.main;
+
+public class Somador implements Runnable {
+
+	private double lineMat1;
+	private double lineMat2;
+
+	public Somador(double lineMat1, double lineMat1) {
+		this.lineMat1 = lineMat1;
+		this.lineMat2 = lineMat2;
+	}
+
+	@Override
+	public void run() {
+		String splited1 = lineMat1.split()
+	}
+
+}

@@ -1,0 +1,152 @@
+
+public class CaracteristicaMancha {
+	
+	public int id;	
+	public int largura;
+	public int altura;	
+	public int posicaoX;
+	public int posicaoY;
+	
+	public double matrizCO0Graus[][];
+	public double matrizCO45Graus[][];
+	public double matrizCO90Graus[][];
+	public double matrizCO135Graus[][];
+	public double matrizCO180Graus[][];
+	public double matrizCO225Graus[][];
+	public double matrizCO270Graus[][];
+	public double matrizCO315Graus[][];
+	
+	public double entropia0Graus;
+	public double entropia45Graus;
+	public double entropia90Graus;
+	public double entropia135Graus;
+	public double entropia180Graus;
+	public double entropia225Graus;
+	public double entropia270Graus;
+	public double entropia315Graus;
+	
+	public double segundoMomentoAng0Graus;
+	public double segundoMomentoAng45Graus;
+	public double segundoMomentoAng90Graus;
+	public double segundoMomentoAng135Graus;
+	public double segundoMomentoAng180Graus;
+	public double segundoMomentoAng225Graus;
+	public double segundoMomentoAng270Graus;
+	public double segundoMomentoAng315raus;
+	
+	public double correlacao0Graus;
+	public double correlacao45Graus;
+	public double correlacao90Graus;
+	public double correlacao135Graus;
+	public double correlacao180Graus;
+	public double correlacao225Graus;
+	public double correlacao0Graus;
+	public double correlacao0Graus;
+	
+	public double homogeneidade;
+	
+	public double[][] getMatrizCO0Graus() {
+		return matrizCO0Graus;
+	}
+	public void setMatrizCO0Graus(double[][] matrizCO0Graus) {
+		this.matrizCO0Graus = matrizCO0Graus;
+	}
+	public double[][] getMatrizCO45Graus() {
+		return matrizCO45Graus;
+	}
+	public void setMatrizCO45Graus(double[][] matrizCO45Graus) {
+		this.matrizCO45Graus = matrizCO45Graus;
+	}
+	public double[][] getMatrizCO90Graus() {
+		return matrizCO90Graus;
+	}
+	public void setMatrizCO90Graus(double[][] matrizCO90Graus) {
+		this.matrizCO90Graus = matrizCO90Graus;
+	}
+	public double[][] getMatrizCO135Graus() {
+		return matrizCO135Graus;
+	}
+	public void setMatrizCO135Graus(double[][] matrizCO135Graus) {
+		this.matrizCO135Graus = matrizCO135Graus;
+	}
+	public double[][] getMatrizCO180Graus() {
+		return matrizCO180Graus;
+	}
+	public void setMatrizCO180Graus(double[][] matrizCO180Graus) {
+		this.matrizCO180Graus = matrizCO180Graus;
+	}
+	public double[][] getMatrizCO225Graus() {
+		return matrizCO225Graus;
+	}
+	public void setMatrizCO225Graus(double[][] matrizCO225Graus) {
+		this.matrizCO225Graus = matrizCO225Graus;
+	}
+	public double[][] getMatrizCO270Graus() {
+		return matrizCO270Graus;
+	}
+	public void setMatrizCO270Graus(double[][] matrizCO270Graus) {
+		this.matrizCO270Graus = matrizCO270Graus;
+	}
+	public double[][] getMatrizCO315Graus() {
+		return matrizCO315Graus;
+	}
+	public void setMatrizCO315Graus(double[][] matrizCO315Graus) {
+		this.matrizCO315Graus = matrizCO315Graus;
+	}
+	public double getEntropia() {
+		return entropia;
+	}
+	public void setEntropia(double entropia) {
+		this.entropia = entropia;
+	}
+	public double getSegundoMomentoAng() {
+		return segundoMomentoAng;
+	}
+	public void setSegundoMomentoAng(double segundoMomentoAng) {
+		this.segundoMomentoAng = segundoMomentoAng;
+	}
+	public double getCorrelacao() {
+		return correlacao;
+	}
+	public void setCorrelacao(double correlacao) {
+		this.correlacao = correlacao;
+	}
+	public double getHomogeneidade() {
+		return homogeneidade;
+	}
+	public void setHomogeneidade(double homogeneidade) {
+		this.homogeneidade = homogeneidade;
+	}
+		
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public int getLargura() {
+		return largura;
+	}
+	public void setLargura(int largura) {
+		this.largura = largura;
+	}
+	public int getAltura() {
+		return altura;
+	}
+	public void setAltura(int altura) {
+		this.altura = altura;
+	}
+	
+	public int getPosicaoX() {
+		return posicaoX;
+	}
+	public void setPosicaoX(int posicaoX) {
+		this.posicaoX = posicaoX;
+	}
+	public int getPosicaoY() {
+		return posicaoY;
+	}
+	public void setPosicaoY(int posicaoY) {
+		this.posicaoY = posicaoY;
+	}
+}

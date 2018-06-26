@@ -1,0 +1,111 @@
+package com.up.somamatrizes.main;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Scanner;
+
+public class Main {
+
+	private static Scanner input;
+
+	public static void main(String[] args) throws IOException, InterruptedException {
+		// if (args.length == 0) {
+		// System.out.println("Arquivo para leitura não especeficado!");
+		// System.exit(1);
+		// }
+
+		// try {
+		// File file = new File("entrada1.txt");
+		// input = new Scanner(file);
+		// } catch (IOException ioException) {
+		// System.err.println("O arquivo não pode ser aberto.");
+		// System.exit(1);
+		// }
+
+		try (BufferedReader br = new BufferedReader(new FileReader("entrada1.txt"))) {
+			int contLines = Integer.parseInt(br.readLine());
+			int contColumns = 0;
+			String matString[] = new String[contLines * 2];
+			String lines;
+			int cont = 0;
+
+			// Preenchendo a primeira matriz
+
+			while ((lines = br.readLine()) != null) {
+				matString[cont] = lines;
+				contColumns = matString[cont].split("\\s+").length;
+				cont++;
+			}
+
+			double mat1[][] = new double[contLines][contColumns];
+			double mat2[][] = new double[contLines][contColumns];
+			String matResult[][] = new String[contLines][contColumns];
+
+			// Preencho a primeira matriz
+			for (int i = 0; i < matString.length; i++) {
+				if (i < (matString.length / 2)) {
+					String[] splited = matString[i].split("\\s+");
+					for (int j = 0; j < splited.length; j++) {
+						mat1[i][j] = Double.parseDouble(splited[j]);
+					}
+				}
+			}
+
+			// Preencho a segunda matriz
+			for (int i = 0; i < matString.length; i++) {
+				if (i >= (matString.length / 2)) {
+					String[] splited = matString[i].split("\\s+");
+					for (int j = 0; j < splited.length; j++) {
+						mat2[i - contLines][j] = Double.parseDouble(splited[j]);
+					}
+				}
+			}
+
+			Thread[] threads = new Thread[contLines];
+			Somador[] somador = new Somador[contLines];
+
+			for (int i = 0; i < contLines; i++) {
+				double[] array1 = new double[contColumns];
+				double[] array2 = new double[contColumns];
+				// Converto a linha da matriz em um array separado
+				for (int j = 0; j < contColumns; j++) {
+					array1[j] = mat1[i][j];
+					array2[j] = mat2[i][j];
+				}
+				// Fazendo a soma
+				somador[i] = new Somador(array1, array2, contColumns);
+				threads[i] = new Thread(somador[i]);
+				threads[i].start();
+			}
+
+			for (int i = 0; i < threads.length; i++) {
+				threads[i].join();
+			}
+
+			// Atribuindo o resultado
+			for (int i = 0; i < somador.length; i++) {
+				for (int j = 0; j < somador[i].getResultSoma().length; j++) {
+					matResult[i][j] = String.valueOf(somador[i].getResultSoma()[j]);
+				}
+			}
+
+			// Mostrando o resultado
+			for (int i = 0; i < contLines; i++) {
+				for (int j = 0; j < contColumns; j++) {
+					if (j == 0) {
+						System.out.print("|" + matResult[i][j]);
+					} else if (j == contColumns - 1) {
+						System.out.print(matResult[i][j] + "|");
+					} else {
+						System.out.print(" "+matResult[i][j] + " ");
+					}
+				}
+				System.out.println("");
+			}
+		}
+	}
+
+}

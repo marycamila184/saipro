@@ -1,0 +1,6 @@
+table tbody tr.selected {
+	background-color: #A9A9A9 !important;
+	color: #fff;
+	vertical-align: middle;
+	padding: 1.5em;
+}

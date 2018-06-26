@@ -1,0 +1,15 @@
+﻿Anotações Reunião Kristian 
+
+- Retirar o Blur por perca de qualidade e de informações na imagem
+- Estudar os pontos a serem passados para aprendizado de máquina (Exemplo: Compração de assinaturas, angulo de inclinação, quantidade de pontos, pressão da caneta)
+- Estudar os padrões para trocar a técnica de espelhamento de imagem pois pode haver complicações (Exemplo encontrar padrões e retirar o que não é a doença)
+- Urgência do banco de dados para comparação nas imagens
+- Diminuição de escopo 
+- Foco em uma doença para finalizar o algoritmo
+- Questões burocráticas do PIC (Proposta)
+- Marcar reunião com todos do projeto o mais rápido possível
+- Treshçold das imagens automáticos
+
+
+
+

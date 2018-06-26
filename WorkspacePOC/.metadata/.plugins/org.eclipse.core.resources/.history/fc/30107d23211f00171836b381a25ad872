@@ -1,0 +1,145 @@
+package main.poc.up.br;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+
+public class POC {
+
+	public static void main(String[] args) throws IOException {
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
+		int dilate_size = 19;
+	
+		Mat source = Highgui.imread("grayscale.jpg", Highgui.CV_LOAD_IMAGE_GRAYSCALE);
+		Mat corte = new Mat(source.rows(), source.cols(), source.type());
+		Mat destination = new Mat(source.rows(), source.cols(), source.type());
+		Mat destinationBlur = new Mat(source.rows(), source.cols(), source.type());
+		Mat destinationDilate = new Mat(source.rows(), source.cols(), source.type());
+		
+		//Primeiro corte na imagem 
+		Imgproc.getRectSubPix(source, new Size((0.65 * source.cols()), (0.6 * source.rows())), new Point((source.cols()*0.5),(source.rows()*0.6)), corte);
+		
+		//Retiro algum ruido
+		Imgproc.blur(corte, destinationBlur, new Size(7, 7));
+		
+		//Equalizo o histograma
+		Imgproc.equalizeHist(destinationBlur, destination);		
+		
+		//-----------------------------SEGMENTAÇÂO BINARIA DO LADO ESQUERDO---------------------------------
+
+		//Faço a dilatação na imagem 
+		Mat elementDilate = Imgproc.getStructuringElement(Imgproc.MORPH_DILATE,
+				new Size(2 * dilate_size + 1, 2 * dilate_size + 1));
+		Imgproc.dilate(destination, destinationDilate, elementDilate);
+		Highgui.imwrite("dilate.jpg", destinationDilate);
+		
+		// CISTO OSSEO NA MANDIBULA QUANTO MAIS AUMENTAR O TAMANHO DO CORTE MAIS
+		// FICA SEGMENTADO
+		Imgproc.threshold(destinationDilate, destinationDilate, 95, 255, Imgproc.THRESH_TOZERO);
+		Highgui.imwrite("segmentacaoCinza.jpg", destinationDilate);		
+		
+		//Declaração das matrizes para espelhamento - segmentação binária
+		Mat part1 = new Mat(destinationDilate.rows(), destinationDilate.cols()/2, destinationDilate.type());
+		Mat part2 = new Mat(destinationDilate.rows(), destinationDilate.cols()/2, destinationDilate.type());	
+		
+		//Pegar metade de imagem - parte 1
+		Imgproc.getRectSubPix(destinationDilate, 
+				new Size(destinationDilate.cols()/2, destinationDilate.rows()), 
+				new Point(destinationDilate.rows() * 0.55,destinationDilate.rows()/2), 
+				part1); 
+		Highgui.imwrite("parte1.jpg", part1);		
+		
+		//Pegar metade de imagem - parte 2
+		Imgproc.getRectSubPix(destinationDilate, 
+				new Size(destinationDilate.cols()/2, destinationDilate.rows()), 
+				new Point(destinationDilate.rows() * 0.50 + destinationDilate.cols()/2,destinationDilate.rows()/2), 
+				part2);
+		
+	    //Rotacionando 90 graus a imagem para comparar posteriormente
+		Core.flip(part2, part2, 1);
+		Highgui.imwrite("parte2.jpg", part2);		
+		
+		//Matriz com o resultado da subtração		
+		//Neste ponto verificar qual o lado com problema e efetuar a subtração dele por primeiro
+		Mat subtractImageCisto = new Mat(destinationDilate.rows()/2, destinationDilate.cols()/2, destinationDilate.type());
+		Core.subtract(part2, part1, subtractImageCisto);
+		 Highgui.imwrite("subtracaoImagemCisto.jpg", subtractImageCisto);
+	
+		//Retirando os pixels com o valor acima ou igual a 190 e deixando deles pretos		
+		 for (int i=0; i<subtractImageCisto.rows(); i++)
+		    {
+		        for(int j=0; j<subtractImageCisto.cols(); j++)
+		        {
+		        	double[] testeCisto = subtractImageCisto.get(i, j);
+		        	if(testeCisto[0] >= 160.00)
+		        	{
+		        		subtractImageCisto.put(i, j, 0);		        		
+		        	}else{
+		        		subtractImageCisto.put(i, j, testeCisto);		    		        		
+		        	}
+		        }
+		    }		 
+		 Highgui.imwrite("pixelsColoridosPretos.jpg", subtractImageCisto);
+		 
+		 Imgproc.blur(subtractImageCisto, subtractImageCisto, new Size(15, 15));
+		 
+		 //Mais uma segmentação para retirara a parte lesionada
+		 Imgproc.threshold(subtractImageCisto, subtractImageCisto, 75, 255, Imgproc.THRESH_TOZERO);
+		 
+		 Imgproc.blur(subtractImageCisto, subtractImageCisto, new Size(15, 15));
+		 
+		//Mais uma segmentação para retirara a parte lesionada
+		 Imgproc.threshold(subtractImageCisto, subtractImageCisto, 85, 255, Imgproc.THRESH_TOZERO);
+		 
+		 Imgproc.blur(subtractImageCisto, subtractImageCisto, new Size(15, 15));
+		 Highgui.imwrite("blurCinza.jpg", subtractImageCisto);
+		 
+		 Imgproc.threshold(subtractImageCisto, subtractImageCisto, 95, 255, Imgproc.THRESH_TOZERO);
+		 Highgui.imwrite("cistoDestaque.jpg", subtractImageCisto);
+		 
+		 //Filtro de canny
+		 Imgproc.Canny(subtractImageCisto, subtractImageCisto, 50, 150, 3, true); 
+		 Highgui.imwrite("canny.jpg", subtractImageCisto);
+		 
+		 //Procurando os contornos
+		 List<MatOfPoint> contours = new ArrayList<MatOfPoint>();    
+		Mat hierarchy = new Mat();
+
+	//	Imgproc.findContours(subtractImageCisto, contours, hierarchy, Imgproc.RETR_CCOMP, Imgproc.CHAIN_APPROX_SIMPLE);
+		 	 
+ //		Imgproc.drawContours(subtractImageCisto, contours, 1, new Scalar(0,0,255));
+		
+		// Imgproc.blur(source, blurredImage, new Size(3, 3));
+		//
+		// Imgproc.Canny(blurredImage, destination, threshold, threshold * 3, 7,
+		// false);
+		//
+		//
+		//
+		// Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT,
+		// new Size(24, 24));
+		// Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT,
+		// new Size(12, 12));
+		//
+		// Imgproc.erode(mask, morphOutput, erodeElement);
+		// Imgproc.erode(mask, morphOutput, erodeElement);
+		//
+		// Imgproc.dilate(mask, morphOutput, dilateElement);
+		// Imgproc.dilate(mask, morphOutput, dilateElement);
+
+		// find contours
+		// Imgproc.findContours(maskedImage, contours, hierarchy,
+		// Imgproc.RETR_CCOMP, Imgproc.CHAIN_APPROX_SIMPLE);
+	}
+
+}

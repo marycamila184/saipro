@@ -1,0 +1,66 @@
+package com.up.clinica.servico;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.up.clinica.model.TipoAnimal;
+import com.up.clinica.model.dal.TipoAnimalDAO;
+import com.up.clinica.servico.converter.TipoAnimalConverter;
+
+@WebServlet(name = "TipoAnimais", urlPatterns = { "/TipoAnimais" })
+public class TipoAnimalService extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+	protected Services servico;
+
+	public TipoAnimalService() {
+		// inicio o serviço com as dependencias
+		servico = new Services(new TipoAnimalDAO(), new TipoAnimalConverter());
+	}
+	
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		try {
+			servico.iniciaServico(request, response);
+		} catch (Exception e) {
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		try {
+			servico.iniciaServico(request, response);
+		} catch (Exception e) {
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			e.printStackTrace();
+		}
+	}
+
+	private class Services extends AbstractService<TipoAnimalConverter, TipoAnimalDAO, TipoAnimal, String> {
+
+		public Services(TipoAnimalDAO dao, TipoAnimalConverter converter) {
+			super(dao, converter);
+		}
+
+		@Override
+		public boolean validatorModel(TipoAnimal objeto) {
+			if (objeto.getAcronimo().equals("") ||objeto.getNome().equals("") || objeto.getDescricao().equals("")) {
+				return false;
+			}
+			return true;
+		}
+
+		@Override
+		public String converterId(String id) {
+			return id;
+		}
+	}
+}

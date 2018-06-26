@@ -1,0 +1,50 @@
+
+public class AtributosTextura {
+
+	public double matrizCO[][];
+	public double entropia;
+	public double segundoMomentoAng;
+	public double correlacao;
+	public double homogeneidade;
+	public String graus;
+	
+	public double[][] getMatrizCO() {
+		return matrizCO;
+	}
+	public void setMatrizCO(double[][] matrizCO) {
+		this.matrizCO = matrizCO;
+	}
+	public double getEntropia() {
+		return entropia;
+	}
+	public void setEntropia(double entropia) {
+		this.entropia = entropia;
+	}
+	public double getSegundoMomentoAng() {
+		return segundoMomentoAng;
+	}
+	public void setSegundoMomentoAng(double segundoMomentoAng) {
+		this.segundoMomentoAng = segundoMomentoAng;
+	}
+	public double getCorrelacao() {
+		return correlacao;
+	}
+	public void setCorrelacao(double correlacao) {
+		this.correlacao = correlacao;
+	}
+	public double getHomogeneidade() {
+		return homogeneidade;
+	}
+	public void setHomogeneidade(double homogeneidade) {
+		this.homogeneidade = homogeneidade;
+	}
+	public int getGraus() {
+		return graus;
+	}
+	public void setGraus(int graus) {
+		this.graus = graus;
+	}
+	
+	
+
+}

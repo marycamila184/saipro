@@ -1,0 +1,1037 @@
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+
+public class HaarCascade {
+
+	public static String returnNameFile(File file) {
+		if (file.isDirectory()) {
+			return "Erro: Imagem não encontrada!";
+		} else {
+			return file.getName();
+		}
+	}
+
+	public static void main(String[] args) throws IOException {
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
+		int resultadoMedia = 0;
+
+		// Carrego todas as imagens
+		File[] files = new File("imagens").listFiles();
+
+		// Faço os testes imagem por imagem
+		for (File file : files) {
+			String completeName = returnNameFile(file);
+			if ((completeName.toLowerCase().contains(".jpg") || completeName.toLowerCase().contains(".png")
+					|| completeName.toLowerCase().contains(".jpeg") || completeName.toLowerCase().contains(".jpeg"))
+					&& !completeName.contains("Erro")) {
+
+				if (completeName.contains("panoramica5")) {
+					double limiar = 0;
+					int numPixel = 0;
+
+					String name[] = completeName.split("\\.");
+
+					// Verificar caso da panoramica 7 juntamente as bordas por
+					// enquanto a
+					// solução foi retirar alguns pixels manualmente
+					Mat source = Highgui.imread("imagens/" + completeName, Highgui.CV_LOAD_IMAGE_GRAYSCALE);
+					Mat destination = new Mat(source.rows(), source.cols(), source.type());
+
+					Imgproc.equalizeHist(source, destination);
+					// Highgui.imwrite("resultado/Histograma-" + name[0] +
+					// ".jpg",
+					// destination);
+
+					// Retirar bordas para entrar na segmentação e sairem
+					for (int i = 0; i < destination.rows(); i++) {
+						for (int j = 0; j < destination.cols(); j++) {
+							double[] pixel = destination.get(i, j);
+							if (pixel[0] <= 50) {
+								destination.put(i, j, 51);
+							}
+						}
+					}
+					// Highgui.imwrite("resultado/Bordas-" + name[0] + ".jpg",
+					// destination);
+
+					// Acho a media para segmentação
+					// Procurar a jutificativa no artigo do pulmão
+					for (int i = 0; i < source.rows(); i++) {
+						for (int j = 0; j < source.cols(); j++) {
+							double[] testeLimiar = source.get(i, j);
+							if (testeLimiar[0] >= 50 && testeLimiar[0] <= 250) {
+								limiar = limiar + testeLimiar[0];
+								numPixel++;
+							}
+						}
+					}
+					resultadoMedia = (int) limiar / numPixel;
+
+					// Procurar justificativa para metade do exame
+					Mat part1 = new Mat(destination.rows(), destination.cols() / 2, destination.type());
+					// Pegar metade de imagem - parte 1
+					for (int i = 0; i < part1.rows(); i++) {
+						for (int j = 0; j < part1.cols(); j++) {
+							double[] posicao = destination.get(i, j);
+							part1.put(i, j, posicao);
+						}
+					}
+					// Highgui.imwrite("resultado/Metade-" + name[0] + ".jpg",
+					// part1);
+
+					// Verificar o tamanho da matriz para gauss
+					Imgproc.GaussianBlur(part1, part1, new Size(45, 45), 0);
+					// Highgui.imwrite("resultado/Gaussian-" + name[0] + ".jpg",
+					// part1);
+
+					// Incrementar ate nao encontrar a posição X e Y para corte
+					// (desta forma
+					// fica dinamico de exame para exame)
+					int contraste = 1;
+
+					// Posição Final para corte
+					int posXLateral = 0;
+					int posYLateral = 0;
+
+					// Distância dos pixels pretos
+					// Inicializo a variavel com o tamanho total da linha
+					int distanciaPixelsPretos = part1.cols();
+					int pixelLonge = 0;
+
+					// Variaveis para comparação
+
+					int posXLateralR = 0;
+					int posYLateralR = 0;
+					int distanciaPixelsPretosR = part1.cols();
+					int pixelLongeR = 0;
+
+					// Laço para contraste dinamico
+					do {
+						contraste++;
+
+						posXLateralR = 0;
+						posYLateralR = 0;
+						distanciaPixelsPretosR = part1.cols();
+						pixelLongeR = 0;
+
+						Mat metade = new Mat(part1.rows(), part1.cols(), part1.type());
+						for (int i = 0; i < metade.rows(); i++) {
+							for (int j = 0; j < metade.cols(); j++) {
+								double[] testeContraste = part1.get(i, j);
+								metade.put(i, j, testeContraste[0] * contraste);
+							}
+						}
+
+						Imgproc.threshold(metade, metade, resultadoMedia, 255, Imgproc.THRESH_BINARY);
+
+						// Encontro a região lateral para segmentação
+						// Critérios para encontrar a região laterial para corte
+						// na
+						// mandíbula
+						// 1 - Sair da borda da esquerda pois e o lado mais
+						// perto da
+						// mandibula e de uma linha com pixel branco
+						// 2 - Verificar a menor distância do primeiro pixel
+						// preto
+						// até o
+						// próximo
+						// pixel branco
+						// 3 - Verificar qual pixel preto é o mais longe da
+						// borda
+						// branca.
+
+						// -------------------------------------------- CORTE
+						// LATERAL
+						// ---------------------------------------------------
+						for (int i = 0; i < metade.rows(); i++) {
+							// Verificar se esta na metade para baixo da imagem
+							if (i >= metade.rows() / 2) {
+								double[] borda = metade.get(i, 0);
+
+								// Acho a borda esquerda branca para começar o
+								// algoritmo
+								if (borda[0] == 255) {
+
+									// Posição do primeiro e do segundo X para
+									// comparação da
+									// distância
+									int posX1 = 0;
+									int posX2 = 0;
+
+									// Percorro a linha com a borda branca
+									for (int k = 0; k < metade.cols(); k++) {
+										double[] pixelLinhaBordaBranca = metade.get(i, k);
+
+										if (posX1 == 0 && pixelLinhaBordaBranca[0] == 0) {
+											posX1 = k;
+										} else if (posX1 != 0 && posX2 == 0 && pixelLinhaBordaBranca[0] == 255) {
+											posX2 = k;
+										}
+
+										// Verificação de distância mais longe e
+										// de
+										// menor
+										// caminho de pretos
+										if (posX1 != 0 && posX2 != 0 && distanciaPixelsPretosR > posX2 - posX1
+												&& pixelLongeR < posX1 && k < metade.cols() / 3) {
+											// Verificação do mais longe
+											posXLateralR = posX1;
+											posYLateralR = i;
+											distanciaPixelsPretosR = posX2 - posX1;
+											pixelLongeR = posX1;
+										}
+									}
+								}
+							}
+						}
+
+						// Atribuo o ultimo valor diferente de 0 as minhas
+						// variaveis
+						// finais
+						if (posXLateralR != 0 && posYLateralR != 0) {
+							posXLateral = posXLateralR;
+							posYLateral = posYLateralR;
+							distanciaPixelsPretos = distanciaPixelsPretosR;
+							pixelLonge = pixelLongeR;
+						}
+					} while (posXLateralR != 0 && posYLateralR != 0);
+
+					for (int i = 0; i < part1.rows(); i++) {
+						for (int j = 0; j < part1.cols(); j++) {
+							double[] testeContraste = part1.get(i, j);
+							part1.put(i, j, testeContraste[0] * (contraste - 1));
+						}
+					}
+					Highgui.imwrite("resultado/Contraste-" + name[0] + ".jpg", part1);
+
+					Imgproc.threshold(part1, part1, resultadoMedia, 255, Imgproc.THRESH_BINARY);
+					Highgui.imwrite("resultado/Segmentacao-" + name[0] + ".jpg", part1);
+
+					System.out.println(" ---------------------------- Informações da imagem " + name[0]
+							+ " ---------------------------- ");
+					System.out.println("Media para segmentação: " + resultadoMedia);
+					System.out.println("Metade da imagemm em colunas: " + part1.cols() / 2);
+					System.out.println("Metade da imagem em linhas: " + part1.rows() / 2);
+					System.out.println("Valor do ultimo contraste aplicado com resultados: " + (contraste - 1));
+
+					System.out.println(
+							" ---------------------------- Informações de corte lateral da imagem ---------------------------- ");
+					System.out.println("Pixel mais longe com a menor distancia: " + pixelLonge);
+					System.out.println("Menor distancia: " + distanciaPixelsPretos);
+					System.out.println("Posição X para corte: " + posXLateral);
+					System.out.println("Posição Y para corte: " + posYLateral);
+
+					// -------------------------------------------- CORTE
+					// INFERIOR E
+					// SUPERIOR
+					// ---------------------------------------------------
+
+					// Posição Final para corte
+					int posYInferior = 0;
+					int posYSuperior = 0;
+					int distanciaPixelsPretosInferior = 0;
+					int distanciaPixelsPretosSuperior = 0;
+
+					// Encontro a região de cima para segmentação
+					// Critérios para encontrar a região de cima para corte na
+					// mandíbula
+					// 1 - Sair da borda direita da imagem de uma linha com
+					// pixel
+					// branco
+					// 2 - Verificar a maior distância do primeiro pixel preto
+					// até o
+					// próximo pixel branco
+
+					// Encontro a região de baixo para segmentação
+					// Critérios para encontrar a região laterial para corte na
+					// mandíbula
+					// 1 - Sair da borda direita da imagem de uma linha com
+					// pixel
+					// branco
+					// 2 - Verificar a maior distância do primeiro pixel preto
+					// até o
+					// próximo pixel branco
+
+					// Outro laço para o corte inferior e superior percorrendo a
+					// imagem
+					// da direita para a esquerda
+					for (int i = 0; i < part1.rows(); i++) {
+
+						// Posição do primeiro e do segundo X para
+						// comparação da
+						// distância
+						int distComp = 0;
+						int distCompBot = 0;
+
+						// Percorro a linha com a borda branca
+						for (int k = part1.cols() - 1; k >= 0; k--) {
+							double[] pixelLinha = part1.get(i, k);
+
+							// Verificar se esta na metade para cima da imagem
+							if (i <= part1.rows() / 2) {
+
+								// Utilizado para comparação superior que
+								// percorre
+								// ate o
+								// final da linha
+								if (pixelLinha[0] == 0) {
+									distComp++;
+								} else {
+									distComp = 0;
+								}
+
+								// Verificação de maior caminho de pretos
+								// superior
+								// Retirar o 10 e estabalecer um parametro de
+								// corte
+								// na linha
+								if (distComp != 0 && distanciaPixelsPretosSuperior < distComp && k > part1.cols() / 2
+										&& i > 10) {
+									posYSuperior = i;
+									distanciaPixelsPretosSuperior = distComp;
+								}
+								// Caso esteja na metade para baixo
+							} else {
+
+								// Utilizado para comparação superior que
+								// percorre
+								// ate o
+								// final da linha
+								if (pixelLinha[0] == 0) {
+									distCompBot++;
+								} else {
+									distCompBot = 0;
+								}
+
+								// Verificação de maior caminho de pretos
+								// superior
+								// Retirar o 10 e estabalecer um parametro de
+								// corte
+								// na linha
+								if (distCompBot != 0 && distanciaPixelsPretosInferior < distCompBot) {
+									posYInferior = i;
+									distanciaPixelsPretosInferior = distCompBot;
+								}
+							}
+						}
+					}
+
+					// Achar o corte de imagem com as coordenadas encontradas
+					for (int i = 0; i < part1.rows(); i++) {
+						for (int j = 0; j < part1.cols(); j++) {
+							if (i == posYSuperior) {
+								part1.put(i, j, 0);
+							}
+							if (i == posYInferior) {
+								part1.put(i, j, 0);
+							}
+							if (j == posXLateral) {
+								part1.put(i, j, 0);
+							}
+						}
+					}
+
+					System.out.println(
+							" ---------------------------- Informações de corte superior da imagem ---------------------------- ");
+					System.out.println("Maior distancia: " + distanciaPixelsPretosSuperior);
+					System.out.println("Posição Y para corte: " + posYSuperior);
+
+					System.out.println(
+							" ---------------------------- Informações de corte inferior da imagem ---------------------------- ");
+					System.out.println("Maior distancia: " + distanciaPixelsPretosInferior);
+					System.out.println("Posição Y para corte: " + posYInferior);
+
+					int posXLateralDir = source.cols() - posXLateral;
+
+					for (int i = 0; i < source.rows(); i++) {
+						for (int j = 0; j < source.cols(); j++) {
+							if (i == posYSuperior || i == posYInferior) {
+								source.put(i, j, 0);
+							}
+							if (j == posXLateral) {
+								source.put(i, j, 0);
+							}
+							if (j == posXLateralDir) {
+								source.put(i, j, 0);
+							}
+						}
+					}
+					// Parte final do algoritmo de segmentação de mandíbula que
+					// retorna a mandibula cortada em uma nova imagem
+
+					int qtdeCols = source.cols() - (2 * posXLateral);
+					int qtdeRows = source.rows() - (posYSuperior + (source.rows() - posYInferior));
+
+					Rect rectCrop = new Rect(posXLateral, posYSuperior, qtdeCols, qtdeRows);
+					Mat imagemResultado = new Mat(source, rectCrop);
+
+					Highgui.imwrite("resultado/Exame-" + name[0] + ".jpg", imagemResultado);
+
+					// ----------------- INICIO DA PARTE DE MANCHAS
+					// ---------------
+
+					// Equalizando o histograma da imagem
+
+					Mat imagemCortada = imagemResultado.clone();
+
+					Imgproc.equalizeHist(imagemResultado, imagemCortada);
+
+					// ----------------- INICIO DA PARTE DE MANCHAS
+					// ---------------
+
+					// Elemento para dilatação
+					int gauss_size = 9;
+					int dilate_size = 18;
+
+					Mat elementDilate = Imgproc.getStructuringElement(Imgproc.MORPH_DILATE,
+							new Size(2 * dilate_size + 1, 2 * dilate_size + 1));
+
+					limiar = 0;
+					numPixel = 0;
+
+					for (int i = 0; i < imagemCortada.rows(); i++) {
+						for (int j = 0; j < imagemCortada.cols(); j++) {
+							double[] testeLimiar = imagemCortada.get(i, j);
+							if (testeLimiar[0] >= 50 && testeLimiar[0] <= 250) {
+								limiar = limiar + testeLimiar[0];
+								numPixel++;
+							}
+						}
+					}
+					int resultadoMediaMandibula = (int) limiar / numPixel;
+
+					// ----------------- INICIO DA CRIAÇÃO DA MÁSCARA
+					// ---------------
+
+					// Corte da mandibula para aplicar na mascara
+					Mat maskMandibula = new Mat(imagemCortada.rows(), imagemCortada.cols(), imagemCortada.type());
+
+					maskMandibula = imagemCortada.clone();
+
+					Imgproc.GaussianBlur(maskMandibula, maskMandibula, new Size(gauss_size * 2 + 1, gauss_size * 2 + 1),
+							0);
+
+					Imgproc.dilate(maskMandibula, maskMandibula, elementDilate);
+
+					System.out.println(
+							" ---------------------------- Informações da imagem das anomalias ---------------------------- ");
+					System.out.println("Média de corte da mandíbula: " + resultadoMediaMandibula);
+
+					Imgproc.threshold(maskMandibula, maskMandibula, resultadoMediaMandibula, 255,
+							Imgproc.THRESH_BINARY);
+
+					for (int i = 0; i < maskMandibula.rows(); i++) {
+						for (int j = 0; j < maskMandibula.cols(); j++) {
+							double[] pixelBorda = maskMandibula.get(i, j);
+
+							// Borda inferior preta da mascara
+							if (i == (maskMandibula.rows() - 1) && pixelBorda[0] == 0) {
+								boolean pixelBranco = false;
+
+								for (int k = maskMandibula.rows() - 1; k >= 0; k--) {
+									double[] pixelLinha = maskMandibula.get(k, j);
+
+									if (!pixelBranco && pixelLinha[0] == 0) {
+										maskMandibula.put(k, j, 255);
+									} else if (!pixelBranco && pixelLinha[0] == 255) {
+										pixelBranco = true;
+									}
+								}
+							}
+
+							// Descarto metade para cima por enquanto
+							if (i <= (maskMandibula.rows() / 2) + (posXLateral / 2)) {
+								maskMandibula.put(i, j, 255);
+							}
+
+							// Borda esquerda preta da mascara
+							if (j == 0 && pixelBorda[0] == 0) {
+								boolean pixelBrancoEsq = false;
+
+								for (int k = 0; k < maskMandibula.cols(); k++) {
+									double[] pixelLinha = maskMandibula.get(i, k);
+
+									if (!pixelBrancoEsq && pixelLinha[0] == 0) {
+										maskMandibula.put(i, k, 255);
+									} else if (!pixelBrancoEsq && pixelLinha[0] == 255) {
+										pixelBrancoEsq = true;
+									}
+								}
+							}
+
+							// Borda direita preta da mascara
+							if (j == (maskMandibula.cols() - 1) && pixelBorda[0] == 0) {
+								boolean pixelBrancoDir = false;
+								for (int k = maskMandibula.cols() - 1; k >= 0; k--) {
+									double[] pixelLinha = maskMandibula.get(i, k);
+
+									if (!pixelBrancoDir && pixelLinha[0] == 0) {
+										maskMandibula.put(i, k, 255);
+									} else if (!pixelBrancoDir && pixelLinha[0] == 255) {
+										pixelBrancoDir = true;
+									}
+								}
+							}
+						}
+					}
+
+					Highgui.imwrite("resultado/Mascara-" + name[0] + ".jpg", maskMandibula);
+
+					// ------------- INICIO DA PARTE QUE DESTACA AS MANCHAS
+					// -----------------
+					Mat imagemAnomalia = new Mat(imagemCortada.rows(), imagemCortada.cols(), imagemCortada.type());
+					Mat imagemPosSubtracao = new Mat(imagemCortada.rows(), imagemCortada.cols(), imagemCortada.type());
+
+					// Dilatação para ver anomalias
+					Imgproc.dilate(imagemCortada, imagemAnomalia, elementDilate);
+
+					// Segmentação para destacar
+					Imgproc.threshold(imagemAnomalia, imagemAnomalia, resultadoMediaMandibula, 255,
+							Imgproc.THRESH_TOZERO);
+
+					// Metade esquerda da imagem para analise
+					Mat parteEsq = new Mat(imagemAnomalia.rows(), imagemAnomalia.cols() / 2, imagemAnomalia.type());
+					Imgproc.getRectSubPix(imagemAnomalia, new Size(imagemAnomalia.cols() / 2, imagemAnomalia.rows()),
+							new Point(imagemAnomalia.rows() / 2, imagemAnomalia.rows() / 2), parteEsq);
+
+					// Metade direita da imagem para analise
+					Mat parteDir = new Mat(imagemAnomalia.rows(), imagemAnomalia.cols() / 2, imagemAnomalia.type());
+					Imgproc.getRectSubPix(imagemAnomalia, new Size(imagemAnomalia.cols() / 2, imagemAnomalia.rows()),
+							new Point(imagemAnomalia.rows() / 2 + imagemAnomalia.cols() / 2, imagemAnomalia.rows() / 2),
+							parteDir);
+					Core.flip(parteDir, parteDir, 1);
+
+					// Subtração
+					Mat subtracaoEsq = new Mat(imagemAnomalia.rows() / 2, imagemAnomalia.cols() / 2,
+							imagemAnomalia.type());
+					Core.subtract(parteDir, parteEsq, subtracaoEsq);
+
+					Mat subtracaoDir = new Mat(imagemAnomalia.rows() / 2, imagemAnomalia.cols() / 2,
+							imagemAnomalia.type());
+					Core.subtract(parteEsq, parteDir, subtracaoDir);
+					Core.flip(subtracaoDir, subtracaoDir, 1);
+
+					// Medias para corte posterior
+					double mediaCorteEsq = 0;
+					int divCorteEsq = 0;
+
+					double mediaCorteDir = 0;
+					int divCorteDir = 0;
+
+					for (int i = 0; i < subtracaoEsq.rows(); i++) {
+						for (int j = 0; j < subtracaoEsq.cols(); j++) {
+							double[] pixelCorte = subtracaoEsq.get(i, j);
+							mediaCorteEsq = mediaCorteEsq + pixelCorte[0];
+							divCorteEsq++;
+						}
+					}
+
+					for (int i = 0; i < subtracaoDir.rows(); i++) {
+						for (int j = 0; j < subtracaoDir.cols(); j++) {
+							double[] pixelCorte = subtracaoDir.get(i, j);
+							mediaCorteDir = mediaCorteDir + pixelCorte[0];
+							divCorteDir++;
+						}
+					}
+
+					int mediaEsqBranco = (int) mediaCorteEsq / divCorteEsq;
+					int mediaDirBranco = (int) mediaCorteDir / divCorteDir;
+
+					Imgproc.threshold(subtracaoEsq, subtracaoEsq, mediaEsqBranco, 255, Imgproc.THRESH_TOZERO);
+					Imgproc.threshold(subtracaoDir, subtracaoDir, mediaDirBranco, 255, Imgproc.THRESH_TOZERO);
+
+					// Junto os dois resultados em uma unica imagem
+					for (int i = 0; i < imagemPosSubtracao.rows(); i++) {
+						for (int j = 0; j < imagemPosSubtracao.cols(); j++) {
+							if (j < imagemPosSubtracao.cols() / 2) {
+								double[] pixelCorte = subtracaoEsq.get(i, j);
+								imagemPosSubtracao.put(i, j, pixelCorte[0]);
+							} else if (j < (imagemPosSubtracao.cols() - 1)) {
+								double[] pixelCorte = subtracaoDir.get(i, j - subtracaoDir.cols());
+								imagemPosSubtracao.put(i, j, pixelCorte[0]);
+							}
+						}
+					}
+
+					Imgproc.threshold(imagemPosSubtracao, imagemPosSubtracao, resultadoMediaMandibula, 255,
+							Imgproc.THRESH_BINARY_INV);
+
+					Imgproc.GaussianBlur(imagemPosSubtracao, imagemPosSubtracao,
+							new Size(gauss_size * 2 + 1, gauss_size * 2 + 1), 0);
+
+					// Junto os dois resultados em uma unica imagem
+					for (int i = 0; i < imagemPosSubtracao.rows(); i++) {
+						for (int j = 0; j < imagemPosSubtracao.cols(); j++) {
+							double[] pixelCorteMask = maskMandibula.get(i, j);
+							double[] pixelCorteSub = imagemPosSubtracao.get(i, j);
+							if (pixelCorteMask[0] != pixelCorteSub[0]) {
+								imagemPosSubtracao.put(i, j, 255);
+							}
+						}
+					}
+
+					for (int i = 0; i < imagemPosSubtracao.rows(); i++) {
+						for (int j = 0; j < imagemPosSubtracao.cols(); j++) {
+							double[] pixelCorteSub = imagemPosSubtracao.get(i, j);
+							if (pixelCorteSub[0] == 0) {
+								imagemPosSubtracao.put(i, j, 255);
+							} else {
+								imagemPosSubtracao.put(i, j, 0);
+							}
+						}
+					}
+
+					Highgui.imwrite("resultado/MascaraFinal-" + name[0] + ".jpg", imagemPosSubtracao);
+
+					// ----------- INICIO PARAMETRIZAÇÂO
+					// ------------------------
+					// Aplicação de canny para extração dos contornos
+					Imgproc.Canny(imagemPosSubtracao, imagemPosSubtracao, 50, resultadoMediaMandibula, 3, true);
+					// Highgui.imwrite("resultado/Canny-" + name[0] + ".jpg",
+					// imagemPosSubtracao);
+
+					List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+					Mat hierarchy = new Mat();
+
+					Imgproc.findContours(imagemPosSubtracao, contours, hierarchy, Imgproc.RETR_CCOMP,
+							Imgproc.CHAIN_APPROX_SIMPLE);
+
+					hierarchy.release();
+
+					// Evito qualquer tipo de ruido
+					Mat mask = new Mat(imagemPosSubtracao.rows(), imagemPosSubtracao.cols(), imagemPosSubtracao.type());
+					for (int i = 0; i < mask.rows(); i++) {
+						for (int j = 0; j < mask.cols(); j++) {
+							mask.put(i, j, 0);
+						}
+					}
+
+					System.out.println("Quantidade de manchas encontradas no total: " + contours.size());
+
+					// Laço para desenhar os contornos encontrados e agrupar os
+					// contornos q estão um dentro do outro
+					for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
+						MatOfPoint2f approxCurve = new MatOfPoint2f();
+						MatOfPoint2f contour2f = new MatOfPoint2f(contours.get(contourIdx).toArray());
+						// Processing on mMOP2f1 which is in type MatOfPoint2f
+						double approxDistance = Imgproc.arcLength(contour2f, true) * 0.02;
+						Imgproc.approxPolyDP(contour2f, approxCurve, approxDistance, true);
+
+						// Convert back to MatOfPoint
+						MatOfPoint points = new MatOfPoint(approxCurve.toArray());
+
+						// Get bounding rect of contour
+						Rect rect = Imgproc.boundingRect(points);
+
+						if (rect.width > 5 && rect.height > 5) {
+							// Desenhando o retangulo
+							Core.rectangle(mask, new Point(rect.x, rect.y),
+									new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(255, 255, 255),
+									-1);
+						}
+					}
+
+					// CANNY NO RESULTADO FINAL
+					Mat maskFinalCanny = new Mat(mask.rows(), mask.cols(), mask.type());
+					Imgproc.Canny(mask, maskFinalCanny, 0, 255, 3, true);
+					Highgui.imwrite("resultado/CannyFinal-" + name[0] + ".jpg", maskFinalCanny);
+
+					// RESULTADO FINAL
+					Mat result = imagemCortada.clone();
+
+					for (int i = 0; i < maskFinalCanny.rows(); i++) {
+						for (int j = 0; j < maskFinalCanny.cols(); j++) {
+							double[] testeMask = maskFinalCanny.get(i, j);
+							if (testeMask[0] == 255) {
+								result.put(i, j, 255);
+							}
+						}
+					}
+
+					Highgui.imwrite("resultado/ResultadoFinal-" + name[0] + ".jpg", result);
+
+					// PARAMETRIZAÇÂO
+					// Aplico a mascara de quadrados a imagem cortada para
+					// extração de parametros
+
+					// Começo a parametrização com os retangulos encontrados na
+					// mascara
+					// Largura e altura
+					// ponto x e y do começo
+					contours = new ArrayList<MatOfPoint>();
+					hierarchy = new Mat();
+
+					Mat maskCaracteristicas = mask.clone();
+
+					Imgproc.findContours(maskCaracteristicas, contours, hierarchy, Imgproc.RETR_CCOMP,
+							Imgproc.CHAIN_APPROX_SIMPLE);
+
+					hierarchy.release();
+
+					System.out.println("Quantidade de manchas destacadas: " + contours.size());
+					System.out.println(
+							" ---------------------------- Detalhes das manchas encontradas ---------------------------- ");
+
+					List<CaracteristicaMancha> caracteristica = new ArrayList<>();
+
+					for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
+						MatOfPoint2f approxCurve = new MatOfPoint2f();
+						MatOfPoint2f contour2f = new MatOfPoint2f(contours.get(contourIdx).toArray());
+						// Processing on mMOP2f1 which is in type MatOfPoint2f
+						double approxDistance = Imgproc.arcLength(contour2f, true) * 0.02;
+						Imgproc.approxPolyDP(contour2f, approxCurve, approxDistance, true);
+
+						// Convert back to MatOfPoint
+						MatOfPoint points = new MatOfPoint(approxCurve.toArray());
+
+						// Get bounding rect of contour
+						Rect rect = Imgproc.boundingRect(points);
+
+						// Carrego uma lista com as caracteristicas das manchas
+						// de uma imagem
+						CaracteristicaMancha caracteristicaObj = new CaracteristicaMancha();
+
+						caracteristicaObj.setLargura(rect.width);
+						caracteristicaObj.setAltura(rect.height);
+						caracteristicaObj.setId(contourIdx + 1);
+						caracteristicaObj.setPosicaoX(rect.x);
+						caracteristicaObj.setPosicaoY(rect.y);
+
+						caracteristica.add(caracteristicaObj);
+
+						System.out.println(
+								"Mancha " + (contourIdx + 1) + " Posição X :" + rect.x + " Posição Y :" + rect.y);
+						System.out.println("Largura :" + rect.width + " Altura :" + rect.height);
+					}
+
+					// Matriz com as manchas dentro dos seus retangulos
+					// Preencho com preto para evitar ruidos
+					Mat matManchas = new Mat(imagemCortada.rows(), imagemCortada.cols(), imagemCortada.type());
+
+					// Matriz somente com o canny aplicado as manchas para
+					// parametrizações
+					for (CaracteristicaMancha caracteristicaMancha : caracteristica) {
+
+						int linhas = caracteristicaMancha.getAltura();
+						int colunas = caracteristicaMancha.getLargura();
+
+						int posX = caracteristicaMancha.getPosicaoX();
+						int posY = caracteristicaMancha.getPosicaoY();
+
+						for (int i = 0; i < imagemCortada.rows(); i++) {
+							for (int j = 0; j < imagemCortada.cols(); j++) {
+
+								if (i == posY && j == posX) {
+									for (int k = 0; k < linhas; k++) {
+										for (int l = 0; l < colunas; l++) {
+											double[] pixel = imagemResultado.get(k + i, l + j);
+											matManchas.put(k + i, l + j, pixel);
+										}
+									}
+								}
+
+							}
+						}
+					}
+
+					Highgui.imwrite("resultado/MatManchas-" + name[0] + ".jpg", matManchas);
+
+					System.out.println(
+							" ---------------------------- ATRIBUTOS DE TEXTURA  ---------------------------- ");
+					System.out.println(
+							" ---------------------------- Matriz padronizada 8 tons  ---------------------------- ");
+
+					// Calculo da Matriz de CO-OCORRENCIA
+					// Padrão de 8 tons de cinza para o MATLAB
+					// Primeiro passo - conversão da matriz para escala de 8
+					// tons de cinza - a cada 32 altera-se valor
+					// Segundo passo - calculo das matrizes para os graus - 0,
+					// 45, 90, 135, 180, 225, 270, 315
+					// Gerar cada matriz de co-ocorrencia com a distancia de 1
+					// para cada um desses
+					// Normalizar a matriz para calculo da textura - somar e
+					// descobrir o total depois dividr cada item pelo numero
+					// total - soma nao pode passar de 1
+
+					// Matriz somente com o canny aplicado as manchas para
+					// parametrizações
+					for (CaracteristicaMancha caracteristicaMancha : caracteristica) {
+
+						int linhas = caracteristicaMancha.getAltura();
+						int colunas = caracteristicaMancha.getLargura();
+
+						int posX = caracteristicaMancha.getPosicaoX();
+						int posY = caracteristicaMancha.getPosicaoY();
+
+						// Matriz utilizada para calculos de co-ocorrencia
+						double[][] matriz8Tons = new double[linhas][colunas];
+
+						// Calculo para gerar a matriz convertida para somente 8
+						// tons de cinza para aplicar textura
+
+						for (int i = 0; i < imagemResultado.rows(); i++) {
+							for (int j = 0; j < imagemResultado.cols(); j++) {
+
+								if (i == posY && j == posX) {
+									for (int k = 0; k < linhas; k++) {
+										for (int l = 0; l < colunas; l++) {
+											double[] pixel = imagemResultado.get(k + i, l + j);
+											if (pixel[0] >= 0 && pixel[0] <= 32) {
+												matriz8Tons[k][l] = 0;
+											} else if (pixel[0] >= 33 && pixel[0] <= 64) {
+												matriz8Tons[k][l] = 1;
+											} else if (pixel[0] >= 63 && pixel[0] <= 96) {
+												matriz8Tons[k][l] = 2;
+											} else if (pixel[0] >= 95 && pixel[0] <= 128) {
+												matriz8Tons[k][l] = 3;
+											} else if (pixel[0] >= 127 && pixel[0] <= 160) {
+												matriz8Tons[k][l] = 4;
+											} else if (pixel[0] >= 159 && pixel[0] <= 192) {
+												matriz8Tons[k][l] = 5;
+											} else if (pixel[0] >= 191 && pixel[0] <= 224) {
+												matriz8Tons[k][l] = 6;
+											} else if (pixel[0] >= 223 && pixel[0] <= 256) {
+												matriz8Tons[k][l] = 7;
+											}
+										}
+									}
+								}
+
+							}
+						}
+
+						System.out.println(
+								" ---------------------------- Matriz padronizada 8 tons  ---------------------------- ");
+
+						for (int k = 0; k < linhas; k++) {
+							for (int l = 0; l < colunas; l++) {
+								System.out.print(" " + matriz8Tons[k][l] + " ");
+							}
+							System.out.println(" ");
+						}
+
+						// VARIAVEIS PARA EXTRAÇÂO DE TEXTURA
+						// Sao utilizadas e zeradas em todos os graus
+						double divisorMatriz = 0;
+						double entropia = 0;
+						double segundoMomentoAng = 0;
+						double mediaTonsCinza = 0;
+						double correlacao = 0;
+						double mediaI = 0;
+						double mediaJ = 0;
+						double varianciaI = 0;
+						double varianciaJ = 0;
+						double desvioPadraoI = 0;
+						double desvioPadraoJ = 0;
+						double contrasteT = 0;
+						double homogeneidade = 0;
+
+						// COMEÇANDO A EXTRAIR ATRIBUTOS DE TEXTURA
+						caracteristicaMancha.setAtributosTextura(new ArrayList<AtributosTextura>());
+
+						// COMEÇANDO COM ANGULO 0
+						AtributosTextura atributosTexturaGrau0 = new AtributosTextura();
+						atributosTexturaGrau0.setGraus(0);
+						atributosTexturaGrau0.setMatrizCO(new double[8][8]);
+
+						// Calculo para Matriz de Co-ocorrencia com dist 1
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+
+								for (int k = 0; k < linhas; k++) {
+									for (int l = 0; l < colunas; l++) {
+
+										// Condicional para nao passar a borda
+										// direita
+										if (l < (colunas - 1)) {
+											double valorLinha = matriz8Tons[k][l];
+											double valorLinhaMaisUm = matriz8Tons[k][l + 1];
+
+											if (valorLinha == i && valorLinhaMaisUm == j) {
+												atributosTexturaGrau0
+														.getMatrizCO()[i][j] = atributosTexturaGrau0.getMatrizCO()[i][j]
+																+ 1;
+											}
+										}
+									}
+								}
+							}
+						}
+
+						// NORMALIZAÇÃO DA MATRIZ
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								divisorMatriz = divisorMatriz + atributosTexturaGrau0.getMatrizCO()[i][j];
+							}
+						}
+
+						// Matriz encontrada final
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								atributosTexturaGrau0.getMatrizCO()[i][j] = atributosTexturaGrau0.getMatrizCO()[i][j]
+										/ divisorMatriz;
+							}
+						}
+
+						System.out.println(
+								" ---------------------------- Matriz normalizada - D = 1 e Ang = 0 ---------------------------- ");
+
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								System.out.print(" " + atributosTexturaGrau0.getMatrizCO()[i][j] + " ");
+							}
+							System.out.println(" ");
+						}
+
+						// EXTRAÇÂO da Média de Tons de Cinza
+						for (int i = 0; i < imagemResultado.rows(); i++) {
+							for (int j = 0; j < imagemResultado.cols(); j++) {
+
+								if (i == posY && j == posX) {
+									for (int k = 0; k < linhas; k++) {
+										for (int l = 0; l < colunas; l++) {
+											double[] pixel = imagemResultado.get(k + i, l + j);
+											mediaTonsCinza = mediaTonsCinza + pixel[0];
+										}
+									}
+								}
+							}
+						}
+
+						System.out.println(
+								" ---------------------------- Atributos de Textura D = 1 e Ang = 0 ---------------------------- ");
+
+						System.out.println("Média de tons de cinza : " + mediaTonsCinza / (linhas * colunas));
+						atributosTexturaGrau0.setMediaTonsCinza((int) mediaTonsCinza / (linhas * colunas));
+
+						// EXTRAÇÂO do SMA Grau 0
+						// SMA e definida como soma de todos os elementos ao
+						// quadrado
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = Math.pow(atributosTexturaGrau0.getMatrizCO()[i][j], 2);
+								segundoMomentoAng = segundoMomentoAng + valor;
+							}
+						}
+
+						System.out.println("Segundo Momento Angular : " + segundoMomentoAng);
+						atributosTexturaGrau0.setSegundoMomentoAng(segundoMomentoAng);
+
+						// EXTRAÇÂO da ENERGIA Grau 0
+						System.out.println("Energia : " + Math.sqrt(segundoMomentoAng));
+						atributosTexturaGrau0.setEnergia(Math.sqrt(segundoMomentoAng));
+
+						System.out.println("Segundo Momento Angular : " + segundoMomentoAng);
+						atributosTexturaGrau0.setSegundoMomentoAng(segundoMomentoAng);
+
+						// EXTRAÇÂO da ENTROPIA Grau 0
+						// ENTROPIA e definida como soma dos elementos a log do
+						// proprio elemento de todos os elementos ao quadrado
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = atributosTexturaGrau0.getMatrizCO()[i][j]
+										* Math.log10(atributosTexturaGrau0.getMatrizCO()[i][j]);
+								if (!Double.isNaN(valor)) {
+									entropia = entropia + valor;
+								}
+							}
+						}
+
+						System.out.println("Entropia : " + entropia * -1);
+						atributosTexturaGrau0.setEntropia(entropia * -1);
+
+						// EXTRAÇÂO da CONTRASTE Grau 0
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = (Math.pow(i - j, 2)) * atributosTexturaGrau0.getMatrizCO()[i][j];
+								contrasteT = contrasteT + valor;
+							}
+						}
+
+						System.out.println("Contraste : " + contrasteT);
+						atributosTexturaGrau0.setContraste(contrasteT);
+
+						// EXTRAÇÂO da HOMOGENEIDADE Grau 0
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = atributosTexturaGrau0.getMatrizCO()[i][j] / (1 + Math.abs(i - j));
+								homogeneidade = homogeneidade + valor;
+							}
+						}
+
+						System.out.println("Homogeneidade : " + homogeneidade);
+						atributosTexturaGrau0.setHomogeneidade(homogeneidade);
+
+						// INICIO DO CALCULO DE CORRELAÇÃO
+						// Calculo das médias
+						// Media i
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = i * atributosTexturaGrau0.getMatrizCO()[i][j];
+								mediaI = mediaI + valor;
+							}
+						}
+
+						System.out.println("Média i : " + mediaI);
+						atributosTexturaGrau0.setMediaI(mediaI);
+
+						// Media j
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = j * atributosTexturaGrau0.getMatrizCO()[i][j];
+								mediaJ = mediaJ + valor;
+							}
+						}
+
+						System.out.println("Média j : " + mediaJ);
+						atributosTexturaGrau0.setMediaJ(mediaJ);
+
+						// Calculo da variancia
+						// Variancia i ao quadrado
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = atributosTexturaGrau0.getMatrizCO()[i][j]
+										* (Math.pow((i - atributosTexturaGrau0.getMediaI()), 2));
+								varianciaI = varianciaI + valor;
+							}
+						}
+
+						System.out.println("Variância i^2 : " + varianciaI);
+						atributosTexturaGrau0.setVarianciaI(varianciaI);
+
+						// Variancia j ao quadrado
+						for (int i = 0; i < 8; i++) {
+							for (int j = 0; j < 8; j++) {
+								double valor = atributosTexturaGrau0.getMatrizCO()[i][j]
+										* (Math.pow((j - atributosTexturaGrau0.getMediaJ()), 2));
+								varianciaJ = varianciaJ + valor;
+							}
+						}
+
+						System.out.println("Variância j^2 : " + varianciaJ);
+						atributosTexturaGrau0.setVarianciaJ(varianciaJ);
+						
+						// Calculo da Desvio Padrão
+						// Desvio Padrão i
+						System.out.println("Variância i : " + desvioPadraoI);
+						atributosTexturaGrau0.setDesvioPadraoI(desvioPadraoI);
+					}
+				}
+			}
+		}
+	}
+}

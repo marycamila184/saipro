@@ -1,0 +1,17 @@
+package com.up.somamatrizes.main;
+
+public class Somador implements Runnable {
+
+	private final LinhaMatriz linhaMatriz1;
+	private final LinhaMatriz linhaMatriz2;
+
+	public Somador(String lineMat1, String lineMat2) {
+
+	}
+
+	@Override
+	public void run() {
+
+	}
+
+}

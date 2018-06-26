@@ -1,0 +1,23 @@
+package com.up.somamatrizes.main;
+
+public class Somador implements Runnable {
+
+	private double[] lineMat1;
+	private double[] lineMat2;
+	private int numColum;
+	private double[] resultSoma;
+
+	public Somador(double[] lineMat1, double[] lineMat2) {
+		this.lineMat1 = lineMat1;
+		this.lineMat2 = lineMat2;
+	}
+
+	@Override
+	public void run() {
+		resultSoma = new double[numColum];
+		for (int i = 0; i < numColum; i++) {
+			resultSoma[i] = 
+		}
+	}
+
+}

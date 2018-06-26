@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="false" key="isRegEx"/>
+		<item value="&#x0D;&#x0A;&#x09;&#x09;&#x09;for (int i = 0; i &lt; mat1.length; i++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;for (int j = 0; j &lt; mat1.length; j++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;&#x09;System.out.print(mat1[i][j] + &quot; &quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;}&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;System.out.println(&quot;&quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;}&#x0D;&#x0A;&#x0D;&#x0A;&#x09;&#x09;&#x09;for (int i = 0; i &lt; mat2.length; i++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;for (int j = 0; j &lt; mat2.length; j++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;&#x09;System.out.print(mat2[i][j] + &quot; &quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;}&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;System.out.println(&quot;&quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;}" key="selection"/>
+		<item value="false" key="casesensitive"/>
+		<item value="false" key="incremental"/>
+		<item value="true" key="wrap"/>
+		<item value="false" key="wholeword"/>
+		<list key="findhistory">
+			<item value="&#x0D;&#x0A;&#x09;&#x09;&#x09;for (int i = 0; i &lt; mat1.length; i++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;for (int j = 0; j &lt; mat1.length; j++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;&#x09;System.out.print(mat1[i][j] + &quot; &quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;}&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;System.out.println(&quot;&quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;}&#x0D;&#x0A;&#x0D;&#x0A;&#x09;&#x09;&#x09;for (int i = 0; i &lt; mat2.length; i++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;for (int j = 0; j &lt; mat2.length; j++) {&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;&#x09;System.out.print(mat2[i][j] + &quot; &quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;}&#x0D;&#x0A;&#x09;&#x09;&#x09;&#x09;System.out.println(&quot;&quot;);&#x0D;&#x0A;&#x09;&#x09;&#x09;}"/>
+			<item value="get("/>
+			<item value="18"/>
+			<item value="45"/>
+			<item value="mask"/>
+			<item value="90"/>
+			<item value="setPosicaoXRelativa"/>
+			<item value="getPosicaoXRelativa"/>
+		</list>
+		<list key="replacehistory">
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item value="284" key="DIALOG_WIDTH"/>
+		<item value="1|Segoe UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
+		<item value="389" key="DIALOG_HEIGHT"/>
+		<item value="1360" key="DIALOG_X_ORIGIN"/>
+		<item value="318" key="DIALOG_Y_ORIGIN"/>
+	</section>
+</section>

@@ -1,0 +1,14 @@
+
+public class AtributosTextura {
+	
+	public double matrizCO[][];
+	
+	public double entropia;
+	
+	public double segundoMomentoAng;
+	
+	public double correlacao;
+	
+	public double homogeneidade;
+
+}

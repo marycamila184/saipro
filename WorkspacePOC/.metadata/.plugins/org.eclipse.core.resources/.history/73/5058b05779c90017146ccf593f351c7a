@@ -1,0 +1,6 @@
+
+public class AtributosTextura {
+	
+	public double matrizCO0Graus[][];
+
+}
